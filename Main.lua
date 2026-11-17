@@ -1,212 +1,342 @@
-
 --[[
     GABIEL'S PRIV
-    Slap Battles | Delta Executor
-    Versão 1.0
+    Slap Battles | Interface
+    Revisao: 1.1
+
+    Esta versao corrige a interface:
+    - Remove completamente a imagem de fundo e o IMAGE_ID.
+    - Mantem o tema azul neon/preto.
+    - Usa lista rolavel para caber em telas pequenas.
+    - Permite arrastar o menu pelo cabecalho.
+    - Fecha e limpa a interface anterior antes de abrir.
+    - Os botoes ON/OFF controlam estados locais da interface.
+
+    IMPORTANTE:
+    Os botoes ainda NAO executam Auto Farm, Auto Badge, Auto Quest,
+    Auto Unlock, Auto TP ou Auto Combat. Cada funcao precisa de uma
+    implementacao propria e compativel com o jogo. Esta base nao finge
+    que essas automacoes estao implementadas.
 ]]
 
 local Players = game:GetService("Players")
-local CoreGui = game:GetService("CoreGui")
+local UserInputService = game:GetService("UserInputService")
 
-local Player = Players.LocalPlayer
+local player = Players.LocalPlayer
+if not player then
+    warn("Gabiel's Priv: jogador local nao encontrado.")
+    return
+end
 
--- CONFIGURAÇÃO
-local IMAGE_ID = "rbxassetid://COLOQUE_O_ID_DA_SUA_IMAGEM"
+-- Escolhe um local apropriado para a interface.
+local function getGuiParent()
+    if typeof(gethui) == "function" then
+        local ok, hui = pcall(gethui)
+        if ok and hui then
+            return hui
+        end
+    end
 
-local old = CoreGui:FindFirstChild("GabielsPriv")
-if old then old:Destroy() end
+    local playerGui = player:FindFirstChildOfClass("PlayerGui")
+    if playerGui then
+        return playerGui
+    end
 
-local Gui = Instance.new("ScreenGui")
-Gui.Name = "GabielsPriv"
-Gui.ResetOnSpawn = false
-Gui.Parent = (gethui and gethui()) or CoreGui
+    return game:GetService("CoreGui")
+end
 
-local Main = Instance.new("Frame")
-Main.Size = UDim2.new(0, 650, 0, 440)
-Main.Position = UDim2.new(0.5, -325, 0.5, -220)
-Main.BackgroundColor3 = Color3.fromRGB(3, 9, 25)
-Main.BackgroundTransparency = 0.12
-Main.BorderSizePixel = 0
-Main.Parent = Gui
+local guiParent = getGuiParent()
 
-local Corner = Instance.new("UICorner")
-Corner.CornerRadius = UDim.new(0, 15)
-Corner.Parent = Main
+-- Remove uma versao anterior.
+local oldGui = guiParent:FindFirstChild("GabielsPriv")
+if oldGui then
+    oldGui:Destroy()
+end
 
-local Stroke = Instance.new("UIStroke")
-Stroke.Color = Color3.fromRGB(0, 110, 255)
-Stroke.Thickness = 2
-Stroke.Parent = Main
+local COLORS = {
+    background = Color3.fromRGB(5, 10, 25),
+    panel = Color3.fromRGB(8, 22, 48),
+    row = Color3.fromRGB(10, 29, 61),
+    blue = Color3.fromRGB(0, 145, 255),
+    blueLight = Color3.fromRGB(80, 185, 255),
+    text = Color3.fromRGB(240, 247, 255),
+    muted = Color3.fromRGB(160, 190, 225),
+    off = Color3.fromRGB(55, 66, 86),
+    green = Color3.fromRGB(20, 165, 105),
+}
 
--- FUNDO: IMAGEM INTEIRA, SEM QUADRADO
-local Background = Instance.new("ImageLabel")
-Background.Size = UDim2.fromScale(1, 1)
-Background.BackgroundTransparency = 1
-Background.Image = IMAGE_ID
-Background.ScaleType = Enum.ScaleType.Crop
-Background.ImageTransparency = 0.35
-Background.ZIndex = 0
-Background.Parent = Main
+local gui = Instance.new("ScreenGui")
+gui.Name = "GabielsPriv"
+gui.ResetOnSpawn = false
+gui.IgnoreGuiInset = true
+gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+gui.DisplayOrder = 999
+gui.Parent = guiParent
 
-local BGCorner = Instance.new("UICorner")
-BGCorner.CornerRadius = UDim.new(0, 15)
-BGCorner.Parent = Background
+local main = Instance.new("Frame")
+main.Name = "Main"
+main.Size = UDim2.new(0, 390, 0, 430)
+main.Position = UDim2.new(0.5, -195, 0.5, -215)
+main.BackgroundColor3 = COLORS.background
+main.BorderSizePixel = 0
+main.ClipsDescendants = true
+main.Parent = gui
 
--- CAMADA ESCURA
-local Overlay = Instance.new("Frame")
-Overlay.Size = UDim2.fromScale(1, 1)
-Overlay.BackgroundColor3 = Color3.fromRGB(0, 5, 20)
-Overlay.BackgroundTransparency = 0.35
-Overlay.BorderSizePixel = 0
-Overlay.ZIndex = 1
-Overlay.Parent = Main
+local mainCorner = Instance.new("UICorner")
+mainCorner.CornerRadius = UDim.new(0, 14)
+mainCorner.Parent = main
 
-local OverlayCorner = Instance.new("UICorner")
-OverlayCorner.CornerRadius = UDim.new(0, 15)
-OverlayCorner.Parent = Overlay
+local mainStroke = Instance.new("UIStroke")
+mainStroke.Color = COLORS.blue
+mainStroke.Thickness = 2
+mainStroke.Transparency = 0.08
+mainStroke.Parent = main
 
--- CABEÇALHO
-local Header = Instance.new("TextLabel")
-Header.Size = UDim2.new(1, -80, 0, 55)
-Header.Position = UDim2.new(0, 20, 0, 8)
-Header.BackgroundTransparency = 1
-Header.Text = "♛  Gabiel's Priv"
-Header.TextColor3 = Color3.fromRGB(40, 145, 255)
-Header.TextSize = 30
-Header.Font = Enum.Font.GothamBold
-Header.TextXAlignment = Enum.TextXAlignment.Left
-Header.ZIndex = 3
-Header.Parent = Main
+local sizeConstraint = Instance.new("UISizeConstraint")
+sizeConstraint.MinSize = Vector2.new(290, 330)
+sizeConstraint.MaxSize = Vector2.new(500, 560)
+sizeConstraint.Parent = main
 
-local Subtitle = Instance.new("TextLabel")
-Subtitle.Size = UDim2.new(1, -30, 0, 25)
-Subtitle.Position = UDim2.new(0, 20, 0, 58)
-Subtitle.BackgroundTransparency = 1
-Subtitle.Text = "Slap Battles • Delta Executor"
-Subtitle.TextColor3 = Color3.fromRGB(170, 205, 255)
-Subtitle.TextSize = 15
-Subtitle.Font = Enum.Font.Gotham
-Subtitle.TextXAlignment = Enum.TextXAlignment.Left
-Subtitle.ZIndex = 3
-Subtitle.Parent = Main
+-- Fundo simples, sem imagem.
+local header = Instance.new("Frame")
+header.Name = "Header"
+header.Size = UDim2.new(1, 0, 0, 88)
+header.BackgroundColor3 = COLORS.panel
+header.BorderSizePixel = 0
+header.Parent = main
 
--- BOTÃO FECHAR
-local Close = Instance.new("TextButton")
-Close.Size = UDim2.new(0, 38, 0, 38)
-Close.Position = UDim2.new(1, -50, 0, 12)
-Close.Text = "X"
-Close.TextSize = 20
-Close.TextColor3 = Color3.new(1, 1, 1)
-Close.BackgroundColor3 = Color3.fromRGB(0, 75, 200)
-Close.ZIndex = 4
-Close.Parent = Main
+local headerCorner = Instance.new("UICorner")
+headerCorner.CornerRadius = UDim.new(0, 14)
+headerCorner.Parent = header
 
-Close.MouseButton1Click:Connect(function()
-    Gui:Destroy()
+local headerCover = Instance.new("Frame")
+headerCover.Size = UDim2.new(1, 0, 0, 16)
+headerCover.Position = UDim2.new(0, 0, 1, -16)
+headerCover.BackgroundColor3 = COLORS.panel
+headerCover.BorderSizePixel = 0
+headerCover.Parent = header
+
+local title = Instance.new("TextLabel")
+title.Name = "Title"
+title.Size = UDim2.new(1, -72, 0, 38)
+title.Position = UDim2.new(0, 18, 0, 10)
+title.BackgroundTransparency = 1
+title.Text = "Gabiel's Priv"
+title.TextColor3 = COLORS.blueLight
+title.TextSize = 25
+title.Font = Enum.Font.GothamBold
+title.TextXAlignment = Enum.TextXAlignment.Left
+title.Parent = header
+
+local subtitle = Instance.new("TextLabel")
+subtitle.Size = UDim2.new(1, -36, 0, 22)
+subtitle.Position = UDim2.new(0, 19, 0, 49)
+subtitle.BackgroundTransparency = 1
+subtitle.Text = "Slap Battles  •  Interface"
+subtitle.TextColor3 = COLORS.muted
+subtitle.TextSize = 13
+subtitle.Font = Enum.Font.Gotham
+subtitle.TextXAlignment = Enum.TextXAlignment.Left
+subtitle.Parent = header
+
+local close = Instance.new("TextButton")
+close.Name = "Close"
+close.Size = UDim2.new(0, 34, 0, 34)
+close.Position = UDim2.new(1, -46, 0, 12)
+close.BackgroundColor3 = Color3.fromRGB(150, 35, 55)
+close.BorderSizePixel = 0
+close.Text = "X"
+close.TextColor3 = COLORS.text
+close.TextSize = 16
+close.Font = Enum.Font.GothamBold
+close.AutoButtonColor = true
+close.Parent = header
+
+local closeCorner = Instance.new("UICorner")
+closeCorner.CornerRadius = UDim.new(0, 9)
+closeCorner.Parent = close
+
+close.Activated:Connect(function()
+    gui:Destroy()
 end)
 
--- OPÇÕES
-local Options = {
+local status = Instance.new("TextLabel")
+status.Name = "Status"
+status.Size = UDim2.new(1, -32, 0, 26)
+status.Position = UDim2.new(0, 16, 0, 94)
+status.BackgroundTransparency = 1
+status.Text = "Interface carregada • automacoes nao configuradas"
+status.TextColor3 = COLORS.muted
+status.TextSize = 11
+status.Font = Enum.Font.Gotham
+status.TextXAlignment = Enum.TextXAlignment.Left
+status.TextTruncate = Enum.TextTruncate.AtEnd
+status.Parent = main
+
+local list = Instance.new("ScrollingFrame")
+list.Name = "Options"
+list.Size = UDim2.new(1, -28, 1, -137)
+list.Position = UDim2.new(0, 14, 0, 125)
+list.BackgroundTransparency = 1
+list.BorderSizePixel = 0
+list.ScrollBarThickness = 4
+list.ScrollBarImageColor3 = COLORS.blue
+list.CanvasSize = UDim2.new(0, 0, 0, 0)
+list.AutomaticCanvasSize = Enum.AutomaticSize.Y
+list.ScrollingDirection = Enum.ScrollingDirection.Y
+list.Parent = main
+
+local layout = Instance.new("UIListLayout")
+layout.Padding = UDim.new(0, 9)
+layout.SortOrder = Enum.SortOrder.LayoutOrder
+layout.Parent = list
+
+local listPadding = Instance.new("UIPadding")
+listPadding.PaddingTop = UDim.new(0, 3)
+listPadding.PaddingBottom = UDim.new(0, 8)
+listPadding.PaddingLeft = UDim.new(0, 2)
+listPadding.PaddingRight = UDim.new(0, 6)
+listPadding.Parent = list
+
+local options = {
     "Auto TP Combat",
     "Auto Unlock",
     "Auto Badge",
     "Auto Quest",
     "Auto Farm",
     "Auto Glove",
-    "Auto Combat"
+    "Auto Combat",
 }
 
-local States = {}
+local states = {}
 
-for i, name in ipairs(Options) do
-    local Row = Instance.new("Frame")
-    Row.Size = UDim2.new(1, -40, 0, 40)
-    Row.Position = UDim2.new(0, 20, 0, 105 + (i-1)*45)
-    Row.BackgroundColor3 = Color3.fromRGB(5, 20, 50)
-    Row.BackgroundTransparency = 0.12
-    Row.BorderSizePixel = 0
-    Row.ZIndex = 3
-    Row.Parent = Main
+-- Ponto de integracao para funcoes futuras.
+-- Os estados mudam, mas nenhuma acao dentro do jogo e executada aqui.
+local function onToggleChanged(optionName, enabled)
+    status.Text = optionName .. (enabled and ": ON" or ": OFF")
+    status.TextColor3 = enabled and COLORS.blueLight or COLORS.muted
+end
 
-    local RC = Instance.new("UICorner")
-    RC.CornerRadius = UDim.new(0, 8)
-    RC.Parent = Row
+for index, optionName in ipairs(options) do
+    states[optionName] = false
 
-    local RS = Instance.new("UIStroke")
-    RS.Color = Color3.fromRGB(0, 90, 220)
-    RS.Thickness = 1
-    RS.Parent = Row
+    local row = Instance.new("Frame")
+    row.Name = "Option_" .. tostring(index)
+    row.Size = UDim2.new(1, -4, 0, 46)
+    row.BackgroundColor3 = COLORS.row
+    row.BorderSizePixel = 0
+    row.LayoutOrder = index
+    row.Parent = list
 
-    local Label = Instance.new("TextLabel")
-    Label.Size = UDim2.new(0.7, 0, 1, 0)
-    Label.Position = UDim2.new(0, 12, 0, 0)
-    Label.BackgroundTransparency = 1
-    Label.Text = name
-    Label.TextColor3 = Color3.fromRGB(235, 245, 255)
-    Label.TextSize = 16
-    Label.Font = Enum.Font.GothamBold
-    Label.TextXAlignment = Enum.TextXAlignment.Left
-    Label.ZIndex = 4
-    Label.Parent = Row
+    local rowCorner = Instance.new("UICorner")
+    rowCorner.CornerRadius = UDim.new(0, 9)
+    rowCorner.Parent = row
 
-    local Toggle = Instance.new("TextButton")
-    Toggle.Size = UDim2.new(0, 65, 0, 28)
-    Toggle.Position = UDim2.new(1, -78, 0.5, -14)
-    Toggle.BackgroundColor3 = Color3.fromRGB(45, 55, 75)
-    Toggle.Text = "OFF"
-    Toggle.TextColor3 = Color3.new(1, 1, 1)
-    Toggle.TextSize = 13
-    Toggle.Font = Enum.Font.GothamBold
-    Toggle.ZIndex = 4
-    Toggle.Parent = Row
+    local rowStroke = Instance.new("UIStroke")
+    rowStroke.Color = COLORS.blue
+    rowStroke.Thickness = 1
+    rowStroke.Transparency = 0.65
+    rowStroke.Parent = row
 
-    local TC = Instance.new("UICorner")
-    TC.CornerRadius = UDim.new(1, 0)
-    TC.Parent = Toggle
+    local label = Instance.new("TextLabel")
+    label.Size = UDim2.new(1, -105, 1, 0)
+    label.Position = UDim2.new(0, 12, 0, 0)
+    label.BackgroundTransparency = 1
+    label.Text = optionName
+    label.TextColor3 = COLORS.text
+    label.TextSize = 14
+    label.Font = Enum.Font.GothamSemibold
+    label.TextXAlignment = Enum.TextXAlignment.Left
+    label.TextTruncate = Enum.TextTruncate.AtEnd
+    label.Parent = row
 
-    States[name] = false
+    local toggle = Instance.new("TextButton")
+    toggle.Name = "Toggle"
+    toggle.Size = UDim2.new(0, 70, 0, 29)
+    toggle.Position = UDim2.new(1, -82, 0.5, -14)
+    toggle.BackgroundColor3 = COLORS.off
+    toggle.BorderSizePixel = 0
+    toggle.Text = "OFF"
+    toggle.TextColor3 = COLORS.text
+    toggle.TextSize = 12
+    toggle.Font = Enum.Font.GothamBold
+    toggle.AutoButtonColor = true
+    toggle.Parent = row
 
-    Toggle.MouseButton1Click:Connect(function()
-        States[name] = not States[name]
+    local toggleCorner = Instance.new("UICorner")
+    toggleCorner.CornerRadius = UDim.new(1, 0)
+    toggleCorner.Parent = toggle
 
-        Toggle.Text = States[name] and "ON" or "OFF"
-        Toggle.BackgroundColor3 = States[name]
-            and Color3.fromRGB(0, 110, 255)
-            or Color3.fromRGB(45, 55, 75)
+    toggle.Activated:Connect(function()
+        states[optionName] = not states[optionName]
+        local enabled = states[optionName]
+
+        toggle.Text = enabled and "ON" or "OFF"
+        toggle.BackgroundColor3 = enabled and COLORS.green or COLORS.off
+        rowStroke.Transparency = enabled and 0.15 or 0.65
+
+        onToggleChanged(optionName, enabled)
     end)
 end
 
--- ARRASTAR MENU
-local UserInputService = game:GetService("UserInputService")
-local dragging, dragStart, startPos
+-- Arrastar somente pelo cabecalho, para nao atrapalhar os botoes.
+local dragging = false
+local dragInput
+local dragStart
+local startPosition
 
-Main.InputBegan:Connect(function(input)
+header.InputBegan:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseButton1
-    or input.UserInputType == Enum.UserInputType.Touch then
+        or input.UserInputType == Enum.UserInputType.Touch then
         dragging = true
         dragStart = input.Position
-        startPos = Main.Position
+        startPosition = main.Position
+
+        input.Changed:Connect(function()
+            if input.UserInputState == Enum.UserInputState.End then
+                dragging = false
+            end
+        end)
+    end
+end)
+
+header.InputChanged:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseMovement
+        or input.UserInputType == Enum.UserInputType.Touch then
+        dragInput = input
     end
 end)
 
 UserInputService.InputChanged:Connect(function(input)
-    if dragging and (
-        input.UserInputType == Enum.UserInputType.MouseMovement
-        or input.UserInputType == Enum.UserInputType.Touch
-    ) then
+    if dragging and input == dragInput then
         local delta = input.Position - dragStart
-        Main.Position = UDim2.new(
-            startPos.X.Scale, startPos.X.Offset + delta.X,
-            startPos.Y.Scale, startPos.Y.Offset + delta.Y
+        main.Position = UDim2.new(
+            startPosition.X.Scale,
+            startPosition.X.Offset + delta.X,
+            startPosition.Y.Scale,
+            startPosition.Y.Offset + delta.Y
         )
     end
 end)
 
-UserInputService.InputEnded:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1
-    or input.UserInputType == Enum.UserInputType.Touch then
-        dragging = false
+-- Ajusta o tamanho em telas menores.
+local function fitToScreen()
+    local camera = workspace.CurrentCamera
+    if not camera then
+        return
     end
-end)
 
-print("Gabiel's Priv carregado!")
+    local viewport = camera.ViewportSize
+    local width = math.min(390, math.max(290, viewport.X - 24))
+    local height = math.min(430, math.max(330, viewport.Y - 48))
+
+    main.Size = UDim2.fromOffset(width, height)
+    main.Position = UDim2.new(0.5, -width / 2, 0.5, -height / 2)
+end
+
+fitToScreen()
+
+if workspace.CurrentCamera then
+    workspace.CurrentCamera:GetPropertyChangedSignal("ViewportSize"):Connect(fitToScreen)
+end
+
+print("Gabiel's Priv: interface carregada.")
